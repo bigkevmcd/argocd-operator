@@ -86,6 +86,9 @@ type ArgoCDCertificateSpec struct {
 
 // ArgoCDDexSpec defines the desired state for the Dex server component.
 type ArgoCDDexSpec struct {
+	// Enabled will toggle Dx support globally for ArgoCD.
+	Enabled bool `json:"enabled"`
+
 	//Config is the dex connector configuration.
 	Config string `json:"config,omitempty"`
 
@@ -100,12 +103,6 @@ type ArgoCDDexSpec struct {
 
 	// Version is the Dex container image tag.
 	Version string `json:"version,omitempty"`
-}
-
-// ArgoCDDexOAuthSpec defines the desired state for the Dex OAuth configuration.
-type ArgoCDDexOAuthSpec struct {
-	// Enabled will toggle OAuth support for the Dex server.
-	Enabled bool `json:"enabled"`
 }
 
 // ArgoCDGrafanaSpec defines the desired state for the Grafana component.
