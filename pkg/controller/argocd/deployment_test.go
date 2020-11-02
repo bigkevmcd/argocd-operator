@@ -11,6 +11,7 @@ import (
 	"github.com/argoproj-labs/argocd-operator/pkg/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -414,6 +415,80 @@ func Test_proxyEnvVars(t *testing.T) {
 	}
 }
 
+func TestReconcileArgoCD_reconcileDexDeployment(t *testing.T) {
+	logf.SetLogger(logf.ZapLogger(true))
+	a := makeTestArgoCD(func(a *argoprojv1alpha1.ArgoCD) {
+		a.Spec.Dex.Enabled = true
+	})
+	r := makeTestReconciler(t, a)
+
+	assertNoError(t, r.reconcileDexDeployment(a))
+
+	deployment := &appsv1.Deployment{}
+	assertNoError(t, r.client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      "argocd-dex-server",
+			Namespace: a.Namespace,
+		},
+		deployment))
+	command := deployment.Spec.Template.Spec.Containers[0].Command
+	want := []string{
+		"/shared/argocd-util",
+		"rundex",
+	}
+	if diff := cmp.Diff(want, command); diff != "" {
+		t.Fatalf("reconciliation failed:\n%s", diff)
+	}
+}
+
+func TestReconcileArgoCD_reconcileDexDeployment_disabled(t *testing.T) {
+	logf.SetLogger(logf.ZapLogger(true))
+	a := makeTestArgoCD(func(a *argoprojv1alpha1.ArgoCD) {
+		a.Spec.Dex.Enabled = false
+	})
+	r := makeTestReconciler(t, a)
+
+	assertNoError(t, r.reconcileDexDeployment(a))
+
+	deployment := &appsv1.Deployment{}
+	assertNotFoundError(t, r.client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      "argocd-dex-server",
+			Namespace: a.Namespace,
+		},
+		deployment))
+}
+
+func TestReconcileArgoCD_reconcileDexDeployment_toggling(t *testing.T) {
+	logf.SetLogger(logf.ZapLogger(true))
+	a := makeTestArgoCD(func(a *argoprojv1alpha1.ArgoCD) {
+		a.Spec.Dex.Enabled = false
+	})
+	d := newDeploymentWithSuffix("dex-server", "dex-server", a)
+	d.Spec.Template.Spec = corev1.PodSpec{
+		Containers: []corev1.Container{
+			{Image: "testing"},
+		},
+		InitContainers: []corev1.Container{
+			{Image: "testing"},
+		},
+	}
+	r := makeTestReconciler(t, a, d)
+
+	assertNoError(t, r.reconcileDexDeployment(a))
+
+	deployment := &appsv1.Deployment{}
+	assertNotFoundError(t, r.client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      "argocd-dex-server",
+			Namespace: a.Namespace,
+		},
+		deployment))
+}
+
 func restoreEnv(t *testing.T) {
 	keys := []string{"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy"}
 	env := map[string]string{}
@@ -490,5 +565,12 @@ func refuteDeploymentHasProxyVars(t *testing.T, c client.Client, name string) {
 				}
 			}
 		}
+	}
+}
+
+func assertNotFoundError(t *testing.T, err error) {
+	t.Helper()
+	if !errors.IsNotFound(err) {
+		t.Fatalf("err was not a NotFound error: %#v\n", err)
 	}
 }

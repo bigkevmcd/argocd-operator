@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	syslog "log"
 	"path/filepath"
 	"strings"
 	"time"

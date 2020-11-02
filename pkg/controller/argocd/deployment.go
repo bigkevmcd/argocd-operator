@@ -476,6 +476,11 @@ func (r *ReconcileArgoCD) reconcileDexDeployment(cr *argoprojv1a1.ArgoCD) error 
 
 	existing := newDeploymentWithSuffix("dex-server", "dex-server", cr)
 	if argoutil.IsObjectFound(r.client, cr.Namespace, existing.Name, existing) {
+		if !cr.Spec.Dex.Enabled {
+			// Deployment exists but enabled flag has been set to false, delete the Deployment
+			return r.client.Delete(context.TODO(), existing)
+		}
+
 		actualImage := existing.Spec.Template.Spec.Containers[0].Image
 		desiredImage := getDexContainerImage(cr)
 		changed := false

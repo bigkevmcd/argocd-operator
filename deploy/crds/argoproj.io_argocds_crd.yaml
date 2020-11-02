@@ -98,7 +98,8 @@ spec:
                   description: Config is the dex connector configuration.
                   type: string
                 enabled:
-                  description: Enabled will toggle Dx support globally for ArgoCD.
+                  default: true
+                  description: Enabled will toggle Dex support globally for ArgoCD.
                   type: boolean
                 image:
                   description: Image is the Dex container image.

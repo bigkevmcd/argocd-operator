@@ -86,7 +86,8 @@ type ArgoCDCertificateSpec struct {
 
 // ArgoCDDexSpec defines the desired state for the Dex server component.
 type ArgoCDDexSpec struct {
-	// Enabled will toggle Dx support globally for ArgoCD.
+	// Enabled will toggle Dex support globally for ArgoCD.
+	// +kubebuilder:default=true
 	Enabled bool `json:"enabled"`
 
 	//Config is the dex connector configuration.
