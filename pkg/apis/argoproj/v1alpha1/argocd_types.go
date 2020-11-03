@@ -367,6 +367,10 @@ type ArgoCDSpec struct {
 	// KustomizeBuildOptions is used to specify build options/parameters to use with `kustomize build`.
 	KustomizeBuildOptions string `json:"kustomizeBuildOptions,omitempty"`
 
+	// LogFormat indicates what format the argocd components should log out as.
+	// This can be json or text, and defaults to text.
+	LogFormat string `json:"logformat,omitempty"`
+
 	// OIDCConfig is the OIDC configuration as an alternative to dex.
 	OIDCConfig string `json:"oidcConfig,omitempty"`
 

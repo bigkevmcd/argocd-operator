@@ -371,6 +371,10 @@ spec:
               description: KustomizeBuildOptions is used to specify build options/parameters
                 to use with `kustomize build`.
               type: string
+            logformat:
+              description: LogFormat indicates what format the argocd components should
+                log out as. This can be json or text, and defaults to text.
+              type: string
             oidcConfig:
               description: OIDCConfig is the OIDC configuration as an alternative
                 to dex.

@@ -116,11 +116,6 @@ func getArgoRepoResources(cr *argoprojv1a1.ArgoCD) corev1.ResourceRequirements {
 	return resources
 }
 
-// getArgoServerInsecure returns the insecure value for the ArgoCD Server component.
-func getArgoServerInsecure(cr *argoprojv1a1.ArgoCD) bool {
-	return cr.Spec.Server.Insecure
-}
-
 // getArgoServerGRPCHost will return the GRPC host for the given ArgoCD.
 func getArgoServerGRPCHost(cr *argoprojv1a1.ArgoCD) string {
 	host := nameWithSuffix("grpc", cr)

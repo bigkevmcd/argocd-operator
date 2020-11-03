@@ -64,7 +64,7 @@ func getArgoApplicationControllerCommand(cr *argoprojv1a1.ArgoCD) []string {
 	if cr.Spec.Controller.AppSync != nil {
 		cmd = append(cmd, "--app-resync", strconv.FormatInt(int64(cr.Spec.Controller.AppSync.Seconds()), 10))
 	}
-	return cmd
+	return configureLogFormatIfNeeded(cmd, cr)
 }
 
 func getArgoExportSecretName(export *argoprojv1a1.ArgoCDExport) string {
@@ -202,39 +202,41 @@ func getArgoImportVolumes(cr *argoprojv1a1.ArgoCDExport) []corev1.Volume {
 
 // getArgoRepoCommand will return the command for the ArgoCD Repo component.
 func getArgoRepoCommand(cr *argoprojv1a1.ArgoCD) []string {
-	cmd := make([]string, 0)
+	cmd := []string{
+		"uid_entrypoint.sh",
+		"argocd-repo-server",
+		"--redis",
+		getRedisServerAddress(cr),
+	}
+	return configureLogFormatIfNeeded(cmd, cr)
+}
 
-	cmd = append(cmd, "uid_entrypoint.sh")
-	cmd = append(cmd, "argocd-repo-server")
-
-	cmd = append(cmd, "--redis")
-	cmd = append(cmd, getRedisServerAddress(cr))
-
+func configureLogFormatIfNeeded(cmd []string, cr *argoprojv1a1.ArgoCD) []string {
+	if cr.Spec.LogFormat != "" {
+		cmd = append(cmd, "--logformat", cr.Spec.LogFormat)
+	}
 	return cmd
 }
 
 // getArgoServerCommand will return the command for the ArgoCD server component.
 func getArgoServerCommand(cr *argoprojv1a1.ArgoCD) []string {
-	cmd := make([]string, 0)
-	cmd = append(cmd, "argocd-server")
+	cmd := []string{
+		"argocd-server",
+		"--staticassets",
+		"/shared/app",
+		"--dex-server",
+		getDexServerAddress(cr),
+		"--repo-server",
+		geRepoServerAddress(cr),
+		"--redis",
+		getRedisServerAddress(cr),
+	}
 
-	if getArgoServerInsecure(cr) {
+	if cr.Spec.Server.Insecure {
 		cmd = append(cmd, "--insecure")
 	}
 
-	cmd = append(cmd, "--staticassets")
-	cmd = append(cmd, "/shared/app")
-
-	cmd = append(cmd, "--dex-server")
-	cmd = append(cmd, getDexServerAddress(cr))
-
-	cmd = append(cmd, "--repo-server")
-	cmd = append(cmd, getRepoServerAddress(cr))
-
-	cmd = append(cmd, "--redis")
-	cmd = append(cmd, getRedisServerAddress(cr))
-
-	return cmd
+	return configureLogFormatIfNeeded(cmd, cr)
 }
 
 // getDexServerAddress will return the Dex server address.

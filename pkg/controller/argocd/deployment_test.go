@@ -3,7 +3,6 @@ package argocd
 import (
 	"context"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -162,14 +161,139 @@ func Test_getArgoApplicationControllerCommand(t *testing.T) {
 				"600",
 			},
 		},
+		{
+			"configured logformat",
+			[]argoCDOpt{logformat("json")},
+			[]string{
+				"argocd-application-controller",
+				"--operation-processors",
+				"10",
+				"--redis",
+				"argocd-redis:6379",
+				"--repo-server",
+				"argocd-repo-server:8081",
+				"--status-processors",
+				"20",
+				"--logformat",
+				"json",
+			},
+		},
 	}
 
 	for _, tt := range cmdTests {
 		cr := makeTestArgoCD(tt.opts...)
 		cmd := getArgoApplicationControllerCommand(cr)
 
-		if !reflect.DeepEqual(cmd, tt.want) {
-			t.Fatalf("got %#v, want %#v", cmd, tt.want)
+		if diff := cmp.Diff(tt.want, cmd); diff != "" {
+			t.Errorf("getArgoApplicationControllerCommand failed:\n%s", diff)
+		}
+	}
+}
+
+func Test_getArgoRepoCommand(t *testing.T) {
+	cmdTests := []struct {
+		name string
+		opts []argoCDOpt
+		want []string
+	}{
+		{
+			"defaults",
+			[]argoCDOpt{},
+			[]string{
+				"uid_entrypoint.sh",
+				"argocd-repo-server",
+				"--redis",
+				"argocd-redis:6379",
+			},
+		},
+		{
+			"configured logformat",
+			[]argoCDOpt{logformat("json")},
+			[]string{
+				"uid_entrypoint.sh",
+				"argocd-repo-server",
+				"--redis",
+				"argocd-redis:6379",
+				"--logformat",
+				"json",
+			},
+		},
+	}
+
+	for _, tt := range cmdTests {
+		cr := makeTestArgoCD(tt.opts...)
+		cmd := getArgoRepoCommand(cr)
+
+		if diff := cmp.Diff(tt.want, cmd); diff != "" {
+			t.Errorf("getArgoRepoCommand failed:\n%s", diff)
+		}
+	}
+}
+
+func Test_getArgoServerCommand(t *testing.T) {
+	cmdTests := []struct {
+		name string
+		opts []argoCDOpt
+		want []string
+	}{
+		{
+			"defaults",
+			[]argoCDOpt{},
+			[]string{
+				"argocd-server",
+				"--staticassets",
+				"/shared/app",
+				"--dex-server",
+				"http://argocd-dex-server:5556",
+				"--repo-server",
+				"argocd-repo-server:8081",
+				"--redis",
+				"argocd-redis:6379",
+			},
+		},
+		{
+			"configured logformat",
+			[]argoCDOpt{logformat("json")},
+			[]string{
+				"argocd-server",
+				"--staticassets",
+				"/shared/app",
+				"--dex-server",
+				"http://argocd-dex-server:5556",
+				"--repo-server",
+				"argocd-repo-server:8081",
+				"--redis",
+				"argocd-redis:6379",
+				"--logformat",
+				"json",
+			},
+		},
+		{
+			"configured for insecure access",
+			[]argoCDOpt{func(cr *argoprojv1alpha1.ArgoCD) {
+				cr.Spec.Server.Insecure = true
+			}},
+			[]string{
+				"argocd-server",
+				"--staticassets",
+				"/shared/app",
+				"--dex-server",
+				"http://argocd-dex-server:5556",
+				"--repo-server",
+				"argocd-repo-server:8081",
+				"--redis",
+				"argocd-redis:6379",
+				"--insecure",
+			},
+		},
+	}
+
+	for _, tt := range cmdTests {
+		cr := makeTestArgoCD(tt.opts...)
+		cmd := getArgoServerCommand(cr)
+
+		if diff := cmp.Diff(tt.want, cmd); diff != "" {
+			t.Errorf("getArgoServerCommand failed:\n%s", diff)
 		}
 	}
 }
@@ -177,6 +301,12 @@ func Test_getArgoApplicationControllerCommand(t *testing.T) {
 func controllerProcessors(n int32) argoCDOpt {
 	return func(a *argoprojv1alpha1.ArgoCD) {
 		a.Spec.Controller.Processors.Status = n
+	}
+}
+
+func logformat(s string) argoCDOpt {
+	return func(a *argoprojv1alpha1.ArgoCD) {
+		a.Spec.LogFormat = s
 	}
 }
 
