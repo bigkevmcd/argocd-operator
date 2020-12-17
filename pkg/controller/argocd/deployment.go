@@ -1063,7 +1063,7 @@ func (r *ReconcileArgoCD) reconcileServerDeployment(cr *argoprojv1a1.ArgoCD) err
 			changed = true
 		}
 		if changed {
-			return r.client.Update(context.TODO(), existing)
+			return r.client.Update(context.TODO(), r.applyUpdates(cr, existing))
 		}
 		return nil // Deployment found with nothing to do, move along...
 	}
@@ -1071,7 +1071,7 @@ func (r *ReconcileArgoCD) reconcileServerDeployment(cr *argoprojv1a1.ArgoCD) err
 	if err := controllerutil.SetControllerReference(cr, deploy, r.scheme); err != nil {
 		return err
 	}
-	return r.client.Create(context.TODO(), deploy)
+	return r.client.Create(context.TODO(), r.applyUpdates(cr, deploy))
 }
 
 // triggerRollout will update the label with the given key to trigger a new rollout of the Deployment.
@@ -1083,6 +1083,13 @@ func (r *ReconcileArgoCD) triggerRollout(deployment *appsv1.Deployment, key stri
 
 	deployment.Spec.Template.ObjectMeta.Labels[key] = nowDefault()
 	return r.client.Update(context.TODO(), deployment)
+}
+
+func (r *ReconcileArgoCD) applyUpdates(cr *argoprojv1a1.ArgoCD, d *appsv1.Deployment) *appsv1.Deployment {
+	for _, o := range r.deploymentModifiers {
+		o(cr, d)
+	}
+	return d
 }
 
 func proxyEnvVars(vars ...corev1.EnvVar) []corev1.EnvVar {

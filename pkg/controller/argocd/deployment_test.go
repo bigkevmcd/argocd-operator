@@ -615,20 +615,20 @@ func TestReconcileArgoCD_with_deployment_mods(t *testing.T) {
 	r := makeTestReconciler(t, a)
 
 	modifierFunc := func(a *argoprojv1alpha1.ArgoCD, d *appsv1.Deployment) {
-		if d.ObjectMeta.Name == "argocd-application-controller" {
+		if d.ObjectMeta.Name == "argocd-server" {
 			d.Spec.Template.Spec.Containers[0].Command = []string{"testing"}
 		}
 	}
 
 	r.deploymentModifiers = []DeploymentModificationFunc{modifierFunc}
 
-	assertNoError(t, r.reconcileApplicationControllerDeployment(a))
+	assertNoError(t, r.reconcileServerDeployment(a))
 
 	deployment := &appsv1.Deployment{}
 	assertNoError(t, r.client.Get(
 		context.TODO(),
 		types.NamespacedName{
-			Name:      "argocd-application-controller",
+			Name:      "argocd-server",
 			Namespace: a.Namespace,
 		},
 		deployment))
