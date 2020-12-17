@@ -609,6 +609,36 @@ func TestReconcileArgoCD_reconcileDexDeployment_withUpdate(t *testing.T) {
 	}
 }
 
+func TestReconcileArgoCD_with_deployment_mods(t *testing.T) {
+	logf.SetLogger(logf.ZapLogger(true))
+	a := makeTestArgoCD()
+	r := makeTestReconciler(t, a)
+
+	modifierFunc := func(a *argoprojv1alpha1.ArgoCD, d *appsv1.Deployment) {
+		if d.ObjectMeta.Name == "argocd-application-controller" {
+			d.Spec.Template.Spec.Containers[0].Command = []string{"testing"}
+		}
+	}
+
+	r.deploymentModifiers = []DeploymentModificationFunc{modifierFunc}
+
+	assertNoError(t, r.reconcileApplicationControllerDeployment(a))
+
+	deployment := &appsv1.Deployment{}
+	assertNoError(t, r.client.Get(
+		context.TODO(),
+		types.NamespacedName{
+			Name:      "argocd-application-controller",
+			Namespace: a.Namespace,
+		},
+		deployment))
+	command := deployment.Spec.Template.Spec.Containers[0].Command
+	want := []string{"testing"}
+	if diff := cmp.Diff(want, command); diff != "" {
+		t.Fatalf("reconciliation failed:\n%s", diff)
+	}
+}
+
 func restoreEnv(t *testing.T) {
 	keys := []string{
 		"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",

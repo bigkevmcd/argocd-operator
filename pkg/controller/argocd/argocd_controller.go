@@ -17,6 +17,7 @@ package argocd
 import (
 	"context"
 
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,12 +32,17 @@ import (
 // blank assignment to verify that ReconcileArgoCD implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileArgoCD{}
 
+// DeploymentModificationFunc is a type that can modify a Deployment before it's saved to
+// the database by the various reconciliation functions.
+type DeploymentModificationFunc func(*argoproj.ArgoCD, *appsv1.Deployment)
+
 // ReconcileArgoCD reconciles a ArgoCD object
 type ReconcileArgoCD struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client              client.Client
+	scheme              *runtime.Scheme
+	deploymentModifiers []DeploymentModificationFunc
 }
 
 var log = logf.Log.WithName("controller_argocd")
